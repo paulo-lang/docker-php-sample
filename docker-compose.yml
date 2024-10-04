@@ -1,0 +1,46 @@
+services:
+    nginx:
+        container_name: php-api-nginx
+        image: nginx:alpine
+        working_dir: /var/www/html
+        volumes:
+            - .:/var/www/html
+            - .docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+        depends_on:
+            # - prod
+            - php-api
+        ports:
+            - "7070:80"
+        networks:
+            - minha-rede
+
+    dev-base:
+        &default 
+        build:
+            context: .
+            target: dev
+        working_dir: /var/www/html
+        volumes:
+            - .:/var/www/html
+
+    php-api:
+        <<: *default
+        container_name: php-api
+        volumes:
+            - .:/var/www/html
+            - .docker/php/fpm.conf:/usr/local/etc/php-fpm.d/zz-docker.conf
+            - .docker/php/php.ini:/usr/local/etc/php/conf.d/zz-php.ini
+        ports:
+            - "7080:7070"
+        networks:
+            - minha-rede
+            
+    build:
+        <<: *default
+        container_name: phptest-build
+        command: >
+            sh -c "composer install --prefer-dist --optimize-autoloader --no-interaction --ignore-platform-reqs && composer build-bootstrap && composer run post-update-cmd && chmod -R 777 /var/www/html/app/cache /var/www/html/app/logs"
+
+networks:
+  minha-rede:
+    external: true
